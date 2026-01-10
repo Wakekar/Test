@@ -4,7 +4,7 @@ pipeline {
     stages {
         stage('Prepare /mnt/project') {
             steps {
-                sh 'rm -rf /mnt/project && sudo mkdir -p /mnt/project'
+                sh 'rm -rf /mnt/project && mkdir -p /mnt/project'
             }
         }
 
