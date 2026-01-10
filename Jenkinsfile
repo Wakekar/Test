@@ -10,7 +10,7 @@ pipeline {
 
         stage('Clone Repository') {
             steps {
-                sh 'git clone -b main https://github.com/doijadajay/test-2025.git /mnt/project'
+                sh 'git clone -b main https://github.com/Wakekar/Test.git /mnt/project'
             }
         }
 
