@@ -4,6 +4,7 @@ pipeline {
     environment {
         PROJECT_DIR = "/mnt/project"
         TOMCAT_ROOT = "/mnt/apache-tomcat-11.0.15/webapps/ROOT"
+        TOMCAT_BIN  = "/mnt/apache-tomcat-11.0.15/bin"
     }
 
     stages {
@@ -36,16 +37,14 @@ pipeline {
         stage('Deploy to Tomcat') {
             steps {
                 sh """
-                    # Remove old ROOT
+                    # Remove old ROOT folder
                     rm -rf ${TOMCAT_ROOT}
-
-                    # Create ROOT folder structure
                     mkdir -p ${TOMCAT_ROOT}/WEB-INF
 
-                    # Copy index.html
+                    # Copy updated index.html
                     cp ${PROJECT_DIR}/index.html ${TOMCAT_ROOT}/
 
-                    # Copy minimal web.xml
+                    # Create minimal web.xml for Tomcat 11+
                     cat > ${TOMCAT_ROOT}/WEB-INF/web.xml <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <web-app xmlns="https://jakarta.ee/xml/ns/jakartaee"
@@ -60,14 +59,14 @@ pipeline {
 </web-app>
 EOF
 
-                    # Set correct permissions
+                    # Fix permissions
                     chmod -R 755 ${TOMCAT_ROOT}
                     chmod 644 ${TOMCAT_ROOT}/index.html
                     chmod 644 ${TOMCAT_ROOT}/WEB-INF/web.xml
 
                     # Restart Tomcat
-                    ${TOMCAT_HOME}/bin/shutdown.sh || true
-                    ${TOMCAT_HOME}/bin/startup.sh
+                    ${TOMCAT_BIN}/shutdown.sh || true
+                    ${TOMCAT_BIN}/startup.sh
                 """
             }
         }
@@ -75,7 +74,7 @@ EOF
 
     post {
         success {
-            echo "Deployment completed successfully!"
+            echo "Deployment completed successfully! Open http://<your-ip>:8080/"
         }
         failure {
             echo "Deployment failed! Check console output."
