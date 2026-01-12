@@ -1,19 +1,16 @@
 pipeline {
     agent any
-
     environment {
-        // Docker image info
-        IMAGE_NAME = "aniketwakekar/test-html"
-        IMAGE_TAG  = "1.0"
+        DOCKER_USER = 'aniketwakekar'
+        DOCKER_PASS = credentials('dockerhub-creds') // Jenkins credential
+        IMAGE_NAME  = 'aniketwakekar/test-html'
+        IMAGE_TAG   = '1.0'
     }
-
     stages {
-
         stage('Checkout Code') {
             steps {
                 echo "🔹 Cloning repository..."
-                git branch: 'main',
-                    url: 'https://github.com/Wakekar/Test.git'
+                git url: 'https://github.com/Wakekar/Test.git', branch: 'main'
             }
         }
 
@@ -34,13 +31,7 @@ pipeline {
         stage('Docker Login') {
             steps {
                 echo "🔹 Logging into Docker Hub..."
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-creds', // Your Jenkins credential ID
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
-                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
-                }
+                sh "echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin"
             }
         }
 
@@ -50,15 +41,22 @@ pipeline {
                 sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
             }
         }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                echo "🔹 Deploying to Kubernetes..."
+                sh 'kubectl apply -f k8s-deployment.yaml'
+            }
+        }
     }
 
     post {
         success {
             echo "✅ Pipeline completed successfully!"
-            echo "Docker image is available at: https://hub.docker.com/r/aniketwakekar/test-html"
+            echo "Docker image: https://hub.docker.com/r/${DOCKER_USER}/test-html"
         }
         failure {
-            echo "❌ Pipeline failed. Check the logs above for errors."
+            echo "❌ Pipeline failed. Check logs for details."
         }
     }
 }
