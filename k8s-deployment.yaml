@@ -5,7 +5,7 @@ metadata:
   labels:
     app: html-app
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: html-app
@@ -19,18 +19,15 @@ spec:
           image: aniketwakekar/test-html:1.0
           ports:
             - containerPort: 80
-
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: html-app-service
 spec:
-  type: NodePort   # exposes service externally
+  type: LoadBalancer   # <-- Makes it publicly accessible
   selector:
     app: html-app
   ports:
-    - protocol: TCP
-      port: 80         # internal cluster port
-      targetPort: 80   # container port
-      nodePort: 30080  # external port accessible on
+    - port: 80          # The port the service exposes
+      targetPort: 80    # The port your container listens on
