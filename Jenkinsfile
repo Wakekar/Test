@@ -2,82 +2,63 @@ pipeline {
     agent any
 
     environment {
-        PROJECT_DIR = "/mnt/project"
-        TOMCAT_ROOT = "/mnt/apache-tomcat-11.0.15/webapps/ROOT"
-        TOMCAT_BIN  = "/mnt/apache-tomcat-11.0.15/bin"
+        // Docker image info
+        IMAGE_NAME = "aniketwakekar/test-html"
+        IMAGE_TAG  = "1.0"
     }
 
     stages {
 
         stage('Checkout Code') {
             steps {
+                echo "🔹 Cloning repository..."
                 git branch: 'main',
                     url: 'https://github.com/Wakekar/Test.git'
             }
         }
 
-        stage('Prepare Workspace') {
+        stage('Show HTML Content') {
             steps {
-                sh """
-                    # Clean previous workspace
-                    rm -rf ${PROJECT_DIR}
-                    mkdir -p ${PROJECT_DIR}
-                """
+                echo "🔹 Displaying HTML file content:"
+                sh 'cat index.html'
             }
         }
 
-        stage('Clone Repository') {
+        stage('Build Docker Image') {
             steps {
-                sh """
-                    git clone -b main https://github.com/Wakekar/Test.git ${PROJECT_DIR}
-                """
+                echo "🔹 Building Docker image: ${IMAGE_NAME}:${IMAGE_TAG}"
+                sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
             }
         }
 
-        stage('Deploy to Tomcat') {
+        stage('Docker Login') {
             steps {
-                sh """
-                    # Remove old ROOT folder
-                    rm -rf ${TOMCAT_ROOT}
-                    mkdir -p ${TOMCAT_ROOT}/WEB-INF
+                echo "🔹 Logging into Docker Hub..."
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds', // Your Jenkins credential ID
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+                }
+            }
+        }
 
-                    # Copy updated index.html
-                    cp ${PROJECT_DIR}/index.html ${TOMCAT_ROOT}/
-
-                    # Create minimal web.xml for Tomcat 11+
-                    cat > ${TOMCAT_ROOT}/WEB-INF/web.xml <<EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<web-app xmlns="https://jakarta.ee/xml/ns/jakartaee"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
-         https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd"
-         version="6.0">
-    <display-name>ROOT</display-name>
-    <welcome-file-list>
-        <welcome-file>index.html</welcome-file>
-    </welcome-file-list>
-</web-app>
-EOF
-
-                    # Fix permissions
-                    chmod -R 755 ${TOMCAT_ROOT}
-                    chmod 644 ${TOMCAT_ROOT}/index.html
-                    chmod 644 ${TOMCAT_ROOT}/WEB-INF/web.xml
-
-                    # Restart Tomcat
-                    ${TOMCAT_BIN}/shutdown.sh || true
-                    ${TOMCAT_BIN}/startup.sh
-                """
+        stage('Push Docker Image') {
+            steps {
+                echo "🔹 Pushing Docker image to Docker Hub..."
+                sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
             }
         }
     }
 
     post {
         success {
-            echo "Deployment completed successfully! Open http://<your-ip>:8080/"
+            echo "✅ Pipeline completed successfully!"
+            echo "Docker image is available at: https://hub.docker.com/r/aniketwakekar/test-html"
         }
         failure {
-            echo "Deployment failed! Check console output."
+            echo "❌ Pipeline failed. Check the logs above for errors."
         }
     }
 }
