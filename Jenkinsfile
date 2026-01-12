@@ -1,8 +1,6 @@
 pipeline {
     agent any
     environment {
-        DOCKER_USER = 'aniketwakekar'
-        DOCKER_PASS = credentials('dockerhub-creds') // Jenkins credential
         IMAGE_NAME  = 'aniketwakekar/test-html'
         IMAGE_TAG   = '1.0'
     }
@@ -31,7 +29,11 @@ pipeline {
         stage('Docker Login') {
             steps {
                 echo "🔹 Logging into Docker Hub..."
-                sh "echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin"
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', 
+                                                 usernameVariable: 'DOCKER_USER', 
+                                                 passwordVariable: 'DOCKER_PASS')]) {
+                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+                }
             }
         }
 
@@ -53,7 +55,7 @@ pipeline {
     post {
         success {
             echo "✅ Pipeline completed successfully!"
-            echo "Docker image: https://hub.docker.com/r/${DOCKER_USER}/test-html"
+            echo "Docker image: https://hub.docker.com/r/aniketwakekar/test-html"
         }
         failure {
             echo "❌ Pipeline failed. Check logs for details."
